@@ -739,23 +739,27 @@ void HookDrop() {
 	// 获取原始 wsasend 函数的地址
 	//RealWsaSend = (LPFN_WSASEND)GetProcAddress(GetModuleHandle("ws2_32.dll"), "WSASend");
 
-	RealCTaskListWnd__Drop ptr = (RealCTaskListWnd__Drop)absoluteAddress;
+	//RealCTaskListWnd__Drop ptr = (RealCTaskListWnd__Drop)absoluteAddress;
 
 	static HWND hTaskbarWnd;
 	hTaskbarWnd = FindWindowW(L"Shell_TrayWnd", NULL);
-	//if (!hTaskbarWnd)
-	//	return EXE_ERR_NO_TASKBAR;
+	if (!hTaskbarWnd)
+		MessageBoxA(NULL, "FindWindowW 失败", "OK", MB_OK);
 
 	HWND hTaskSwWnd = (HWND)GetPropW(hTaskbarWnd, L"TaskbandHWND");
-	//if (!hTaskSwWnd)
-	//	return EXE_ERR_NO_TASKLIST;
+	if (!hTaskSwWnd)
+		MessageBoxA(NULL, "GetPropW 失败", "OK", MB_OK);
 	lpTaskSwLongPtr = GetWindowLongPtr(hTaskSwWnd, 0);
+	if (!lpTaskSwLongPtr)
+		MessageBoxA(NULL, "GetWindowLongPtr 失败", "OK", MB_OK);
 
 	HWND hTaskListWnd = FindWindowExW(hTaskSwWnd, NULL, L"MSTaskListWClass", NULL);
-	//if (!hTaskListWnd)
-	//	return EXE_ERR_NO_TASKLIST;
+	if (!hTaskListWnd)
+		MessageBoxA(NULL, "FindWindowExW 失败", "OK", MB_OK);
 
 	HANDLE hProp = GetPropW(hTaskSwWnd, L"OleDropTargetInterface");
+	if (!hProp)
+		MessageBoxA(NULL, "GetPropW 失败", "OK", MB_OK);
 	//CTaskListWnd x;
 	//if (isFirst) {
 	//	__this1 = __this;
@@ -763,6 +767,9 @@ void HookDrop() {
 	//	return 0;
 	//}
 	IDataObject1 = GetDataObjectForFile("C:\\Windows\\System32\\calc.exe", NULL);
+	if (!IDataObject1)
+		MessageBoxA(NULL, "GetDataObjectForFile 失败", "OK", MB_OK);
+
 	unsigned int x = 0;
 	unsigned int* y = &x;
 	_POINTL z;
