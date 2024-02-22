@@ -10,7 +10,7 @@ GetProcAddress 的返回类型就是一个FARPROC。
 
 typedef struct _THREAD_PARAM
 {
-	FARPROC pFunc[2];               // LoadLibraryA(), GetProcAddress()，存放两个API函数的地址
+	FARPROC pFunc[3];               // LoadLibraryA(), GetProcAddress()，存放两个API函数的地址
 	char    szBuf[4][128];          // "user32.dll", "MessageBoxA", "www.reversecore.com", "ReverseCore" 
 } THREAD_PARAM, * PTHREAD_PARAM;
 
@@ -24,6 +24,8 @@ typedef FARPROC(WINAPI* PFGETPROCADDRESS)//同理GetProcAddress()的函数指针
 	HMODULE hModule,//模块句柄
 	LPCSTR lpProcName//查找的函数名字符串指针
 	);
+typedef FARPROC(WINAPI* MYPRINTF)//同理GetProcAddress()的函数指针
+();
 
 typedef int (WINAPI* PFMESSAGEBOXA)//MessageBoxA的函数指针
 (
@@ -38,11 +40,13 @@ DWORD WINAPI ThreadProc(LPVOID lParam)     //线程过程，用来存放我们�
 	PTHREAD_PARAM   pParam = (PTHREAD_PARAM)lParam;   //将传入的指针强制类型转换为我们定义的线程参数结构体类型的指针，其实指针本质都是相同的，只是语言的语法要求
 	HMODULE         hMod = NULL;                                              //定义一个hMod来存放模块句柄
 	FARPROC         pFunc = NULL;                                                  //定义一个FARPROC类型的变量来存放GetProcAddress的返回值
+	//MessageBoxA(NULL, "获取成功", "OK", MB_OK);
 
 	hMod = ((PFLOADLIBRARYA)pParam->pFunc[0])(pParam->szBuf[0]);   // LoadLibrary("user32.dll")
 	if (!hMod)
 		return 1;
 
+	//pFunc = (FARPROC)((MYPRINTF)pParam->pFunc[2])();  // GetProcAddress(hMod, "MessageBoxA");
 	pFunc = (FARPROC)((PFGETPROCADDRESS)pParam->pFunc[1])(hMod, pParam->szBuf[1]);  // GetProcAddress(hMod, "MessageBoxA");
 	if (!pFunc)
 		return 1;
@@ -51,8 +55,16 @@ DWORD WINAPI ThreadProc(LPVOID lParam)     //线程过程，用来存放我们�
 
 	return 0;
 }
-
-BOOL InjectCode(DWORD dwPID)
+void WINAPI myPrintf();
+void WINAPI myPrintf() {
+	MessageBoxA(NULL, "获取成功", "OK", MB_OK);
+}
+void* GetProgmanProcess() {
+	unsigned long procId_ul;
+	GetWindowThreadProcessId(FindWindowA("Progman", NULL), &procId_ul);
+	return OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_WRITE, 0, procId_ul);
+}
+BOOL InjectCode()
 {
 	HMODULE         hMod = NULL;
 	THREAD_PARAM    param = { 0, };
@@ -65,12 +77,13 @@ BOOL InjectCode(DWORD dwPID)
 
 	param.pFunc[0] = GetProcAddress(hMod, "LoadLibraryA");  //给线程参数结构体赋值
 	param.pFunc[1] = GetProcAddress(hMod, "GetProcAddress");
+	param.pFunc[2] = (FARPROC)myPrintf;
 	strcpy_s(param.szBuf[0], "user32.dll");
 	strcpy_s(param.szBuf[1], "MessageBoxA");
 	strcpy_s(param.szBuf[2], "www.reversecore.com");
 	strcpy_s(param.szBuf[3], "ReverseCore");
 
-	if (!(hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPID)))//根据PID获取进程句柄
+	if (!(hProcess = GetProgmanProcess()))//根据PID获取进程句柄
 	{
 		printf("OpenProcess() fail : err_code = %d\n", GetLastError());
 		return FALSE;
@@ -98,6 +111,9 @@ BOOL InjectCode(DWORD dwPID)
 
 	//就是因为这个的原因，生成的时候必须用release
 	dwSize = (DWORD)InjectCode - (DWORD)ThreadProc;//函数名就是函数的起始地址，在内存中紧跟着ThreadProc函数的就是InjectCode,所以首地址相减就能够得到ThreadProc代码占用的空间
+
+	//dwSize += 100000; // 没事, 但是别这么写
+
 	if (!(pRemoteBuf[1] = VirtualAllocEx(hProcess,
 		NULL,
 		dwSize,
@@ -187,21 +203,12 @@ BOOL SetPrivilege(LPCTSTR lpszPrivilege, BOOL bEnablePrivilege) //设置权限
 	return TRUE;
 }
 
-int main(int argc, char* argv[])
+int main()
 {
-	DWORD dwPID = 0;
-
-	if (argc != 2)
-	{
-		printf("\n USAGE  : %s <pid>\n", argv[0]);
-		return 1;
-	}
-
 	if (!SetPrivilege(SE_DEBUG_NAME, TRUE))
 		return 1;
 
-	dwPID = (DWORD)atol(argv[1]);//将字符串转换为长整型
-	InjectCode(dwPID);
+	InjectCode();
 
 	return 0;
 }
