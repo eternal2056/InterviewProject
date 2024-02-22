@@ -51,12 +51,8 @@ DWORD WINAPI ThreadProc(LPVOID lParam)     //线程过程，用来存放我们�
 
 	return 0;
 }
-void* GetProgmanProcess() {
-	unsigned long procId_ul;
-	GetWindowThreadProcessId(FindWindowA("Progman", NULL), &procId_ul);
-	return OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_WRITE, 0, procId_ul);
-}
-BOOL InjectCode()
+
+BOOL InjectCode(DWORD dwPID)
 {
 	HMODULE         hMod = NULL;
 	THREAD_PARAM    param = { 0, };
@@ -74,7 +70,7 @@ BOOL InjectCode()
 	strcpy_s(param.szBuf[2], "www.reversecore.com");
 	strcpy_s(param.szBuf[3], "ReverseCore");
 
-	if (!(hProcess = GetProgmanProcess()))//根据PID获取进程句柄
+	if (!(hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPID)))//根据PID获取进程句柄
 	{
 		printf("OpenProcess() fail : err_code = %d\n", GetLastError());
 		return FALSE;
@@ -191,12 +187,21 @@ BOOL SetPrivilege(LPCTSTR lpszPrivilege, BOOL bEnablePrivilege) //设置权限
 	return TRUE;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+	DWORD dwPID = 0;
+
+	if (argc != 2)
+	{
+		printf("\n USAGE  : %s <pid>\n", argv[0]);
+		return 1;
+	}
+
 	if (!SetPrivilege(SE_DEBUG_NAME, TRUE))
 		return 1;
 
-	InjectCode();
+	dwPID = (DWORD)atol(argv[1]);//将字符串转换为长整型
+	InjectCode(dwPID);
 
 	return 0;
 }

@@ -356,7 +356,7 @@ void HookUser32() {
 	//function();
 
 	// 获取原始 wsasend 函数的地址
-	TrueDispatchMessageW = (PFnDispatchMessageW)GetProcAddress(GetModuleHandle("user32.dll"), "DispatchMessageW");
+	TrueDispatchMessageW = (PFnDispatchMessageW)GetProcAddress(GetModuleHandle(L"user32.dll"), "DispatchMessageW");
 
 	//RealCTaskBand__InsertPinnedItem ptr = (RealCTaskBand__InsertPinnedItem)absoluteAddress;
 	// 对 wsasend 函数进行 Hook，将其替换为自定义的 HookedWsaSend 函数
@@ -454,7 +454,7 @@ void HookUser32SendMessag() {
 	//function();
 
 	// 获取原始 wsasend 函数的地址
-	TrueSendMessageW = (PFnSendMessageW)GetProcAddress(GetModuleHandle("user32.dll"), "SendMessageW");
+	TrueSendMessageW = (PFnSendMessageW)GetProcAddress(GetModuleHandle(L"user32.dll"), "SendMessageW");
 
 	//RealCTaskBand__InsertPinnedItem ptr = (RealCTaskBand__InsertPinnedItem)absoluteAddress;
 	// 对 wsasend 函数进行 Hook，将其替换为自定义的 HookedWsaSend 函数
