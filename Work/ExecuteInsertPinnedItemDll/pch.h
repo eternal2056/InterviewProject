@@ -17,6 +17,9 @@
 #include <ShlObj.h>
 #include <objidl.h>
 #include <sdkddkver.h>
+#include <vector>
+
+
 void HookInsertPin();
 
 #define WIN_VERSION_UNSUPPORTED    (-1)
