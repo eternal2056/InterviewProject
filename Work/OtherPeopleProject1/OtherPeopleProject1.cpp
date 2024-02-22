@@ -33,46 +33,6 @@ BOOL WriteMsg2Console(LPCWSTR msg, ...)
 #define BUFFER_SIZE  0x478
 #define COMMAND_BUFFER_SIZE 0x64
 
-static const void WINAPI replace_wchar(const wchar_t* srcStr, wchar_t replaceChar)
-{
-	if (srcStr == NULL)
-		return;
-
-	int strLen = 0;
-	const wchar_t* sptr = srcStr;
-	while (*sptr++) ++strLen;
-
-	if (strLen >= 0)
-	{
-		int lastIndex = strLen;
-		wchar_t* pSrcChar = (wchar_t*)&srcStr[lastIndex];
-		do
-		{
-			if (*pSrcChar == replaceChar)
-			{
-				if (lastIndex == strLen)
-				{
-					*pSrcChar = 0;
-				}
-				else if (lastIndex < strLen)
-				{
-					int diff = strLen - lastIndex;
-					wchar_t* pOldChar = pSrcChar + 1;
-					wchar_t* pNewLocation = pSrcChar;
-					while (diff)
-					{
-						*pNewLocation = *pOldChar;
-						++pOldChar;
-						++pNewLocation;
-						--diff;
-					}
-				}
-			}
-			--lastIndex;
-			--pSrcChar;
-		} while (lastIndex >= 0);
-	}
-}
 typedef __int64(*RealCTaskListWnd__Drop)(
 	void* __this,
 	struct IDataObject* a2,
@@ -134,32 +94,6 @@ static DWORD WINAPI thread_func(void* pContextData)
 		}
 	}
 
-	static HWND hTaskbarWnd;
-	hTaskbarWnd = FindWindowW(L"Shell_TrayWnd", NULL);
-	if (!hTaskbarWnd)
-		MessageBoxA(NULL, "FindWindowW 失败", "OK", MB_OK);
-
-	HWND hTaskSwWnd = (HWND)GetPropW(hTaskbarWnd, L"TaskbandHWND");
-	if (!hTaskSwWnd)
-		MessageBoxA(NULL, "GetPropW 失败", "OK", MB_OK);
-	LONG_PTR lpTaskSwLongPtr = GetWindowLongPtr(hTaskSwWnd, 0);
-	if (!lpTaskSwLongPtr)
-		MessageBoxA(NULL, "GetWindowLongPtr 失败", "OK", MB_OK);
-
-	HWND hTaskListWnd = FindWindowExW(hTaskSwWnd, NULL, L"MSTaskListWClass", NULL);
-	if (!hTaskListWnd)
-		MessageBoxA(NULL, "FindWindowExW 失败", "OK", MB_OK);
-
-	HANDLE hProp = GetPropW(hTaskSwWnd, L"OleDropTargetInterface");
-	if (!hProp)
-		MessageBoxA(NULL, "GetPropW 失败", "OK", MB_OK);
-	//CTaskListWnd x;
-	//if (isFirst) {
-	//	__this1 = __this;
-	//	isFirst = false;
-	//	return 0;
-	//}
-
 
 	const char* filePath = "C:\\Windows\\System32\\calc.exe";
 	HWND hwnd = 0;
@@ -194,31 +128,89 @@ static DWORD WINAPI thread_func(void* pContextData)
 
 	IDataObject1 = pDataObject;
 
+	static HWND hTaskbarWnd;
+	hTaskbarWnd = FindWindowW(L"Shell_TrayWnd", NULL);
+	if (!hTaskbarWnd)
+		MessageBoxA(NULL, "FindWindowW 失败", "OK", MB_OK);
+
+	HWND hTaskSwWnd = (HWND)GetPropW(hTaskbarWnd, L"TaskbandHWND");
+	if (!hTaskSwWnd)
+		MessageBoxA(NULL, "GetPropW 失败", "OK", MB_OK);
+
 
 	unsigned int x = 0;
 	unsigned int* y = &x;
 	_POINTL z;
 	z.x = 0x12F;
 	z.y = 0x38A;
-	int nWinVersion = WIN_VERSION_10_19H1;
+	LONG_PTR lpTaskSwLongPtr = GetWindowLongPtr(hTaskSwWnd, 0);
+	if (!lpTaskSwLongPtr)
+		MessageBoxA(NULL, "GetWindowLongPtr 失败", "OK", MB_OK);
 	//MessageBoxA(NULL, "EV_TASK_SW_TASK_GROUPS_HDPA 开始", "OK", MB_OK);
-	LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr +
-		DO11_3264(0xA8, 0x120, 0xA4, 0x118, 0xA8, 0x120, 0xC0, 0x140, 0xC0, 0x148, 0xC4, 0x150, 0xC0, 0x158, 0xC8, 0x160, , , , , 0xC0, 0x158));;
-	if (plp && (int)plp[0] > 0)
-	{
-		int task_groups_count = (int)plp[0];
-		LONG_PTR** task_groups = (LONG_PTR**)plp[1];
-		LONG_PTR* task_group = task_groups[0];
-		//int x = (((*(int*)(baseAddress + 0x5D)) / 8) + 3);
 
-		char* x = ((char*)(absoluteAddress)+0x5D + 0x3);
-		//MessageBoxA(NULL, AddressToAnsiString((void*)x).data(), "OK", MB_OK);
-		char buffer3[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
-		sprintf_s(buffer3, "%p", (void*)*(short*)x); // 将地址格式化成字符串
-		//MessageBoxA(NULL, buffer3, "OK", MB_OK);
-		*((unsigned long long**)hProp + (int)((int)*(short*)x / 8)) = (unsigned long long*)task_group;
-		((RealCTaskListWnd__Drop)absoluteAddress)(hProp, IDataObject1, 0, z, y);
+	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x158);	// 一半可以一半不行
+	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x160); // 完全不行
+	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x150); // 完全不行
+	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x148); // 注入了, 但是不崩溃
+	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x140); // 完全不行
+	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x120); // 完全不行
+	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x118); // 完全不行
+
+
+	CoInitialize(NULL);
+
+	// 获取桌面的 IShellFolder 接口
+	LPSHELLFOLDER pDesktopFolder;
+	SHGetDesktopFolder(&pDesktopFolder);
+
+	// 文件路径
+	LPCWSTR filePath = L"C:\\path\\to\\your\\file.txt";
+
+	// 使用 IShellFolder 接口的 ParseDisplayName 方法来解析文件路径并获取 FolderItem 对象
+	FolderItem* pFolderItem;
+	ULONG pchEaten;
+	ULONG pdwAttributes;
+	// 定义一个 ITEMIDLIST 来表示要获取的项目
+	LPITEMIDLIST pidlItem;
+	HRESULT hr = pDesktopFolder->ParseDisplayName(NULL, NULL, (LPWSTR)filePath, &pchEaten, &pidlItem, &pdwAttributes);
+	if (SUCCEEDED(hr)) {
+		// 获取 FolderItem 对象
+		pDesktopFolder->GetUIObjectOf(NULL, 1, &pidlItem, IID_FolderItem, NULL, (void**)&pFolderItem);
+
+		// 使用 FolderItem 对象进行操作，比如获取文件路径、属性等
+
+		// 释放资源
+		pFolderItem->Release();
+		CoTaskMemFree(pidlItem); // 释放 ITEMIDLIST 对象
 	}
+	else {
+		// 处理解析文件路径失败的情况
+	}
+
+	//if (true)
+	//{
+	//	HANDLE hProp = GetPropW(hTaskSwWnd, L"OleDropTargetInterface");
+	//	if (!hProp)
+	//		MessageBoxA(NULL, "GetPropW 失败", "OK", MB_OK);
+	//	__int64 v12;
+	//	v12 = *((uintptr_t*)hProp + 139);
+	//	char buffer3[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
+	//	sprintf_s(buffer3, "%p", (void*)v12); // 将地址格式化成字符串
+	//	MessageBoxA(NULL, buffer3, "OK", MB_OK);
+	//	//int task_groups_count = (int)plp[0];
+	//	//LONG_PTR** task_groups = (LONG_PTR**)plp[1];
+	//	//LONG_PTR* task_group = task_groups[0];
+	//	////int x = (((*(int*)(baseAddress + 0x5D)) / 8) + 3);
+
+	//	//char* x = ((char*)(absoluteAddress)+0x5D + 0x3);
+	//	////MessageBoxA(NULL, AddressToAnsiString((void*)x).data(), "OK", MB_OK);
+	//	//char buffer3[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
+	//	//sprintf_s(buffer3, "%p", (void*)*(short*)x); // 将地址格式化成字符串
+	//	////MessageBoxA(NULL, buffer3, "OK", MB_OK);
+
+	//	* ((unsigned long long**)hProp + (int)((int)*(short*)x / 8)) = (unsigned long long*)(struct ITaskGroup*)(*(__int64(__fastcall**)(__int64))(*(uintptr_t*)v12 + 48i64))(v12);;
+	//	((RealCTaskListWnd__Drop)absoluteAddress)(hProp, IDataObject1, 0, z, y);
+	//}
 	return 1;
 }
 
@@ -292,69 +284,13 @@ BOOL __fastcall InjectFun2Explorer(LPCVOID lpThreadArgs, HANDLE hProcess, thread
 	return ret;
 }
 
-//Uncomment this for dbgviewer in release build mode 
-//#define _DEBUG 1 
-// Win10Pin2TB  "C:\HOME_NGQ\DriverMonitor\monitor.exe" "pin to taskbar"
 int main()
 {
-	HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-	LPWSTR commandline = GetCommandLine();
-	int pNumArgs = 0;
-	LPWSTR* szArglist = CommandLineToArgvW(commandline, &pNumArgs);
-	if (pNumArgs < 3)
-	{
-		WriteMsg2Console(commandline);
-		OutputDebugString(commandline);
-		return 1i64;
-	}
-
-	WriteMsg2Console(commandline);
-
-	WCHAR fileName[MAX_PATH] = { 0 };
-	memset(fileName, 0, 2 * MAX_PATH);
-	WCHAR folder[MAX_PATH] = { 0 };
-	memset(folder, 0, 2 * MAX_PATH);
-	wcscpy_s(folder, szArglist[1]);
-	wcscpy_s(fileName, szArglist[1]);
-
-	DWORD fileAttributes = GetFileAttributes(folder);
-	if ((fileAttributes == INVALID_FILE_ATTRIBUTES || fileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-	{
-		WriteMsg2Console(L"Can't get file attributes");
-		SetConsoleTextAttribute(stdHandle, 0xAu); //BACKGROUND_BLUE
-		ExitProcess(0);
-	}
-
-	char buffer[BUFFER_SIZE] = { 0 };
-	memset(buffer, 0, BUFFER_SIZE);
-	PathStripPath(fileName);
-	memcpy_s(buffer, BUFFER_SIZE, fileName, MAX_PATH * 2);
-
-	PathRemoveFileSpec(folder);
-	memcpy_s(buffer + MAX_PATH * 2, BUFFER_SIZE, folder, MAX_PATH * 2);
-
-	WCHAR command[COMMAND_BUFFER_SIZE] = { 0 };
-	wcscpy_s(command, szArglist[2]);
-	memcpy_s(buffer + MAX_PATH * 4, BUFFER_SIZE, command, COMMAND_BUFFER_SIZE);
-
-	int opCode = 0;
-	if (iswdigit((wint_t)*command))
-	{
-		StrToIntEx(command, 0, &opCode);
-		memcpy_s(buffer + MAX_PATH * 4 + COMMAND_BUFFER_SIZE, BUFFER_SIZE, &opCode, sizeof(int));
-	}
-	else
-	{
-		_wcslwr_s(command);
-	}
-
 	HWND hProgman = FindWindowW(L"Progman", NULL);
 	if (hProgman == NULL) {
 		(L"Can't get file attributes");
 		WriteMsg2Console(L"Can't find progman");
 	}
-
-	printf(buffer);
 
 	DWORD 	dwProcessId = 0;
 	GetWindowThreadProcessId(hProgman, &dwProcessId);
@@ -363,7 +299,7 @@ int main()
 		HANDLE hExplorer = OpenProcess(PROCESS_CREATE_THREAD | PROCESS_VM_OPERATION | PROCESS_VM_WRITE, 0, dwProcessId);
 		if (hExplorer != INVALID_HANDLE_VALUE)
 		{
-			InjectFun2Explorer(buffer, hExplorer, thread_func);
+			InjectFun2Explorer(NULL, hExplorer, thread_func);
 		}
 		else
 		{
