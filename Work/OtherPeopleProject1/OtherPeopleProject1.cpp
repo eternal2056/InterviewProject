@@ -33,185 +33,273 @@ BOOL WriteMsg2Console(LPCWSTR msg, ...)
 #define BUFFER_SIZE  0x478
 #define COMMAND_BUFFER_SIZE 0x64
 
-typedef __int64(*RealCTaskListWnd__Drop)(
-	void* __this,
-	struct IDataObject* a2,
-	unsigned int a3,
-	struct _POINTL a4,
-	unsigned int* a5
-	);
+
 typedef DWORD(WINAPI* thread_callback)(void* pContextData);
 static DWORD WINAPI thread_func(void* pContextData)
 {
-	uintptr_t absoluteAddress = NULL; // 获取模块基址
-	uintptr_t baseAddress = reinterpret_cast<uintptr_t>(GetModuleHandle(NULL)); // 获取模块基址
-	uintptr_t relativeOffset = 0x2357E0; // 替换为函数在目标程序中的相对地址
+	CoInitialize(0i64);
 
+	IShellDispatch* pIShellDispatch = NULL;
+	HRESULT hResult = S_FALSE;
+	hResult = CoCreateInstance(CLSID_Shell, 0i64, CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER | CLSCTX_REMOTE_SERVER,
+		IID_IShellDispatch, (LPVOID*)&pIShellDispatch);
 
+	if (!SUCCEEDED(hResult) || pIShellDispatch == NULL)
+	{
+		return false;
+	}
+	else
+	{
+		VARIANTARG variantDir;
+		VariantInit(&variantDir);
+		variantDir.vt = VT_BSTR;
+		char* pDir = (char*)L"C:\\Windows\\System32";//520
+		//char pDir[] = "C:\\HOME_NGQ\\DriverMonitor\\";
+		//MessageBoxA(NULL, pDir, "OK", MB_OK);
 
-	uintptr_t ulStartAddress = baseAddress;
-	uintptr_t ulEndAddress = baseAddress + relativeOffset + 10000;
-	uintptr_t* retFunAddr;
-	CHAR szCodeFlag1[] = { 0x48,0x89 ,0x5C ,0x24 ,0x10 ,0x48, 0x89 ,0x6C ,0x24 ,0x18, 0x56, 0x57,
-					   0x41, 0x54,
-					   0x41, 0x56,
-					   0x41, 0x57,
-					   0x48, 0x83,0xEC,0x30,
-					   0x4C, 0x8B,0xE2,
-					   0x48, 0x8B,0xF1,
-					   0x48, 0x83,0xC1, 0xE8,
-					   0x33, 0xD2,
-					   0x49, 0x8B, 0xD9,
-					   0x45, 0x8B, 0xF8,
-	};
-	char buffer2[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
-	sprintf_s(buffer2, "%p", (void*)*(int*)(ulStartAddress + 40)); // 将地址格式化成字符串
-	//MessageBoxA(NULL, buffer2, "OK", MB_OK);
-	for (size_t i = ulStartAddress; i < ulEndAddress; i++) {
+		variantDir.llVal = LONGLONG(pDir);
 
-
-		const unsigned char* byte_ptr1 = (const unsigned char*)i;
-		const unsigned char* byte_ptr2 = (const unsigned char*)szCodeFlag1;
-		bool isMatch = true;
-		for (size_t i = 0; i < sizeof(szCodeFlag1); ++i)
+		Folder* pFolder = NULL;
+		hResult = pIShellDispatch->NameSpace(variantDir, &pFolder);
+		if (pFolder != NULL)
 		{
-			if (byte_ptr1[i] < byte_ptr2[i])
-				isMatch = false;
-			else if (byte_ptr1[i] > byte_ptr2[i])
-				isMatch = false;
+			FolderItem* pFolderItem = NULL;
+			BSTR fileName = (WCHAR*)L"calc.exe";
+			MessageBoxW(NULL, fileName, L"OK", MB_OK);
+			hResult = pFolder->ParseName(fileName, &pFolderItem);
+			FolderItemVerbs* pVerbs = NULL;
+			if (pFolderItem != NULL)
+			{
+				hResult = pFolderItem->Verbs(&pVerbs);
+				long verbsCount = 0;
+				if (pVerbs != NULL)
+				{
+					hResult = pVerbs->get_Count(&verbsCount);
+					FolderItemVerb* pTargetVerb = NULL;
+					for (int i = 0; i < verbsCount; i++)
+					{
+						VARIANTARG variantIndex;
+						variantIndex.lVal = i;
+						variantIndex.vt = VT_I4;
+						FolderItemVerb* pVerb = NULL;
+						hResult = pVerbs->Item(variantIndex, &pVerb);
+						wchar_t tempName[MAX_PATH];
+						for (int i = 0; i < MAX_PATH; ++i) {
+							tempName[i] = L'\0'; // 或者直接使用 0
+						}
+						if (pVerb != NULL)
+						{
+							BSTR pVerbName = NULL;
+							hResult = pVerb->get_Name(&pVerbName);
+							if (pVerbName == NULL || *(wchar_t*)pVerbName == 0)
+								continue;
+
+							StringCchCopyW(tempName, MAX_PATH, pVerbName);
+							CharLowerW(tempName);
+							//MessageBoxW(NULL, tempName, L"OK", MB_OK);
+							if (SUCCEEDED(hResult) && !lstrcmpW((wchar_t*)tempName, L"pin to taskbar"))
+							{
+								pTargetVerb = pVerb;
+								break;
+							}
+							if (SUCCEEDED(hResult) && !lstrcmpW((wchar_t*)tempName, L"pin to tas&kbar"))
+							{
+								pTargetVerb = pVerb;
+								break;
+							}
+							pVerb->Release();
+						}
+					}
+					if (pTargetVerb != NULL)
+					{
+						hResult = pTargetVerb->DoIt();
+						pTargetVerb->Release();
+					}
+					pVerbs->Release();
+				}
+				pFolderItem->Release();
+			}
+			pFolder->Release();
 		}
-
-		if (isMatch) {
-			//MessageBoxA(NULL, "获取成功", "OK", MB_OK);
-			char buffer1[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
-			sprintf_s(buffer1, "%p", (void*)(i)); // 将地址格式化成字符串
-			//MessageBoxA(NULL, buffer1, "OK", MB_OK);
-			absoluteAddress = i;
-			//return 1;
-			//if (memcmp(i + 0x23, szCodeFiag2, 7) == 0) {
-			//	return 1;
-			//}
-		}
+		pIShellDispatch->Release();
 	}
 
+	CoUninitialize();
 
-	const char* filePath = "C:\\Windows\\System32\\calc.exe";
-	HWND hwnd = 0;
-	CComPtr<IShellFolder> pDesktopFolder;
-	HRESULT hr = SHGetDesktopFolder(&pDesktopFolder);
-
-	// 计算转换后需要的缓冲区大小
-	int nLength = MultiByteToWideChar(CP_UTF8, 0, filePath, -1, nullptr, 0);
-	// 分配缓冲区
-	WCHAR* wszTarget = new WCHAR[nLength];
-	// 执行转换
-	if (MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wszTarget, nLength) == 0) {
-		delete[] wszTarget; // 释放内存
-	}
-
-	WCHAR* lpWPath = wszTarget;
-	LPITEMIDLIST pidl;
-	hr = pDesktopFolder->ParseDisplayName(nullptr, nullptr, lpWPath, nullptr, &pidl, nullptr);
-	if (FAILED(hr)) {
-	}
-	CComPtr<IShellFolder> pShellFolder;
-	LPCITEMIDLIST pidlChild;
-	hr = SHBindToParent(pidl, IID_IShellFolder, (void**)&pShellFolder, &pidlChild);
-	CoTaskMemFree(pidl);
-	if (FAILED(hr)) {
-	}
-	IDataObject* pDataObject = nullptr;
-	hr = pShellFolder->GetUIObjectOf(hwnd, 1, &pidlChild, IID_IDataObject, nullptr, (void**)&pDataObject);
-	if (FAILED(hr)) {
-	}
-	IDataObject* IDataObject1 = NULL;
-
-	IDataObject1 = pDataObject;
-
-	static HWND hTaskbarWnd;
-	hTaskbarWnd = FindWindowW(L"Shell_TrayWnd", NULL);
-	if (!hTaskbarWnd)
-		MessageBoxA(NULL, "FindWindowW 失败", "OK", MB_OK);
-
-	HWND hTaskSwWnd = (HWND)GetPropW(hTaskbarWnd, L"TaskbandHWND");
-	if (!hTaskSwWnd)
-		MessageBoxA(NULL, "GetPropW 失败", "OK", MB_OK);
+	return SUCCEEDED(hResult);
 
 
-	unsigned int x = 0;
-	unsigned int* y = &x;
-	_POINTL z;
-	z.x = 0x12F;
-	z.y = 0x38A;
-	LONG_PTR lpTaskSwLongPtr = GetWindowLongPtr(hTaskSwWnd, 0);
-	if (!lpTaskSwLongPtr)
-		MessageBoxA(NULL, "GetWindowLongPtr 失败", "OK", MB_OK);
-	//MessageBoxA(NULL, "EV_TASK_SW_TASK_GROUPS_HDPA 开始", "OK", MB_OK);
-
-	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x158);	// 一半可以一半不行
-	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x160); // 完全不行
-	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x150); // 完全不行
-	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x148); // 注入了, 但是不崩溃
-	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x140); // 完全不行
-	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x120); // 完全不行
-	//LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x118); // 完全不行
 
 
-	CoInitialize(NULL);
+	//uintptr_t absoluteAddress = NULL; // 获取模块基址
+	//uintptr_t baseAddress = reinterpret_cast<uintptr_t>(GetModuleHandle(NULL)); // 获取模块基址
+	//uintptr_t relativeOffset = 0x2357E0; // 替换为函数在目标程序中的相对地址
 
-	// 获取桌面的 IShellFolder 接口
-	LPSHELLFOLDER pDesktopFolder;
-	SHGetDesktopFolder(&pDesktopFolder);
 
-	// 文件路径
-	LPCWSTR filePath = L"C:\\path\\to\\your\\file.txt";
 
-	// 使用 IShellFolder 接口的 ParseDisplayName 方法来解析文件路径并获取 FolderItem 对象
-	FolderItem* pFolderItem;
-	ULONG pchEaten;
-	ULONG pdwAttributes;
-	// 定义一个 ITEMIDLIST 来表示要获取的项目
-	LPITEMIDLIST pidlItem;
-	HRESULT hr = pDesktopFolder->ParseDisplayName(NULL, NULL, (LPWSTR)filePath, &pchEaten, &pidlItem, &pdwAttributes);
-	if (SUCCEEDED(hr)) {
-		// 获取 FolderItem 对象
-		pDesktopFolder->GetUIObjectOf(NULL, 1, &pidlItem, IID_FolderItem, NULL, (void**)&pFolderItem);
+	//uintptr_t ulStartAddress = baseAddress;
+	//uintptr_t ulEndAddress = baseAddress + relativeOffset + 10000;
+	//uintptr_t* retFunAddr;
+	//CHAR szCodeFlag1[] = { 0x48,0x89 ,0x5C ,0x24 ,0x10 ,0x48, 0x89 ,0x6C ,0x24 ,0x18, 0x56, 0x57,
+	//				   0x41, 0x54,
+	//				   0x41, 0x56,
+	//				   0x41, 0x57,
+	//				   0x48, 0x83,0xEC,0x30,
+	//				   0x4C, 0x8B,0xE2,
+	//				   0x48, 0x8B,0xF1,
+	//				   0x48, 0x83,0xC1, 0xE8,
+	//				   0x33, 0xD2,
+	//				   0x49, 0x8B, 0xD9,
+	//				   0x45, 0x8B, 0xF8,
+	//};
+	//char buffer2[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
+	//sprintf_s(buffer2, "%p", (void*)*(int*)(ulStartAddress + 40)); // 将地址格式化成字符串
+	////MessageBoxA(NULL, buffer2, "OK", MB_OK);
+	//for (size_t i = ulStartAddress; i < ulEndAddress; i++) {
 
-		// 使用 FolderItem 对象进行操作，比如获取文件路径、属性等
 
-		// 释放资源
-		pFolderItem->Release();
-		CoTaskMemFree(pidlItem); // 释放 ITEMIDLIST 对象
-	}
-	else {
-		// 处理解析文件路径失败的情况
-	}
+	//	const unsigned char* byte_ptr1 = (const unsigned char*)i;
+	//	const unsigned char* byte_ptr2 = (const unsigned char*)szCodeFlag1;
+	//	bool isMatch = true;
+	//	for (size_t i = 0; i < sizeof(szCodeFlag1); ++i)
+	//	{
+	//		if (byte_ptr1[i] < byte_ptr2[i])
+	//			isMatch = false;
+	//		else if (byte_ptr1[i] > byte_ptr2[i])
+	//			isMatch = false;
+	//	}
 
-	//if (true)
-	//{
-	//	HANDLE hProp = GetPropW(hTaskSwWnd, L"OleDropTargetInterface");
-	//	if (!hProp)
-	//		MessageBoxA(NULL, "GetPropW 失败", "OK", MB_OK);
-	//	__int64 v12;
-	//	v12 = *((uintptr_t*)hProp + 139);
-	//	char buffer3[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
-	//	sprintf_s(buffer3, "%p", (void*)v12); // 将地址格式化成字符串
-	//	MessageBoxA(NULL, buffer3, "OK", MB_OK);
-	//	//int task_groups_count = (int)plp[0];
-	//	//LONG_PTR** task_groups = (LONG_PTR**)plp[1];
-	//	//LONG_PTR* task_group = task_groups[0];
-	//	////int x = (((*(int*)(baseAddress + 0x5D)) / 8) + 3);
-
-	//	//char* x = ((char*)(absoluteAddress)+0x5D + 0x3);
-	//	////MessageBoxA(NULL, AddressToAnsiString((void*)x).data(), "OK", MB_OK);
-	//	//char buffer3[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
-	//	//sprintf_s(buffer3, "%p", (void*)*(short*)x); // 将地址格式化成字符串
-	//	////MessageBoxA(NULL, buffer3, "OK", MB_OK);
-
-	//	* ((unsigned long long**)hProp + (int)((int)*(short*)x / 8)) = (unsigned long long*)(struct ITaskGroup*)(*(__int64(__fastcall**)(__int64))(*(uintptr_t*)v12 + 48i64))(v12);;
-	//	((RealCTaskListWnd__Drop)absoluteAddress)(hProp, IDataObject1, 0, z, y);
+	//	if (isMatch) {
+	//		//MessageBoxA(NULL, "获取成功", "OK", MB_OK);
+	//		char buffer1[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
+	//		sprintf_s(buffer1, "%p", (void*)(i)); // 将地址格式化成字符串
+	//		//MessageBoxA(NULL, buffer1, "OK", MB_OK);
+	//		absoluteAddress = i;
+	//		//return 1;
+	//		//if (memcmp(i + 0x23, szCodeFiag2, 7) == 0) {
+	//		//	return 1;
+	//		//}
+	//	}
 	//}
-	return 1;
+
+
+	//const char* filePath = "C:\\Windows\\System32\\calc.exe";
+	//HWND hwnd = 0;
+	//CComPtr<IShellFolder> pDesktopFolder;
+	//HRESULT hr = SHGetDesktopFolder(&pDesktopFolder);
+
+	//// 计算转换后需要的缓冲区大小
+	//int nLength = MultiByteToWideChar(CP_UTF8, 0, filePath, -1, nullptr, 0);
+	//// 分配缓冲区
+	//WCHAR* wszTarget = new WCHAR[nLength];
+	//// 执行转换
+	//if (MultiByteToWideChar(CP_UTF8, 0, filePath, -1, wszTarget, nLength) == 0) {
+	//	delete[] wszTarget; // 释放内存
+	//}
+
+	//WCHAR* lpWPath = wszTarget;
+	//LPITEMIDLIST pidl;
+	//hr = pDesktopFolder->ParseDisplayName(nullptr, nullptr, lpWPath, nullptr, &pidl, nullptr);
+	//if (FAILED(hr)) {
+	//}
+	//CComPtr<IShellFolder> pShellFolder;
+	//LPCITEMIDLIST pidlChild;
+	//hr = SHBindToParent(pidl, IID_IShellFolder, (void**)&pShellFolder, &pidlChild);
+	//CoTaskMemFree(pidl);
+	//if (FAILED(hr)) {
+	//}
+	//IDataObject* pDataObject = nullptr;
+	//hr = pShellFolder->GetUIObjectOf(hwnd, 1, &pidlChild, IID_IDataObject, nullptr, (void**)&pDataObject);
+	//if (FAILED(hr)) {
+	//}
+	//IDataObject* IDataObject1 = NULL;
+
+	//IDataObject1 = pDataObject;
+
+	//static HWND hTaskbarWnd;
+	//hTaskbarWnd = FindWindowW(L"Shell_TrayWnd", NULL);
+	//if (!hTaskbarWnd)
+	//	MessageBoxA(NULL, "FindWindowW 失败", "OK", MB_OK);
+
+	//HWND hTaskSwWnd = (HWND)GetPropW(hTaskbarWnd, L"TaskbandHWND");
+	//if (!hTaskSwWnd)
+	//	MessageBoxA(NULL, "GetPropW 失败", "OK", MB_OK);
+
+
+	//unsigned int x = 0;
+	//unsigned int* y = &x;
+	//_POINTL z;
+	//z.x = 0x12F;
+	//z.y = 0x38A;
+	//LONG_PTR lpTaskSwLongPtr = GetWindowLongPtr(hTaskSwWnd, 0);
+	//if (!lpTaskSwLongPtr)
+	//	MessageBoxA(NULL, "GetWindowLongPtr 失败", "OK", MB_OK);
+	////MessageBoxA(NULL, "EV_TASK_SW_TASK_GROUPS_HDPA 开始", "OK", MB_OK);
+
+	////LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x158);	// 一半可以一半不行
+	////LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x160); // 完全不行
+	////LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x150); // 完全不行
+	////LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x148); // 注入了, 但是不崩溃
+	////LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x140); // 完全不行
+	////LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x120); // 完全不行
+	////LONG_PTR* plp = (LONG_PTR*)*(HDPA*)(lpTaskSwLongPtr + 0x118); // 完全不行
+
+
+	//CoInitialize(NULL);
+
+	//// 获取桌面的 IShellFolder 接口
+	//LPSHELLFOLDER pDesktopFolder;
+	//SHGetDesktopFolder(&pDesktopFolder);
+
+	//// 文件路径
+	//LPCWSTR filePath = L"C:\\path\\to\\your\\file.txt";
+
+	//// 使用 IShellFolder 接口的 ParseDisplayName 方法来解析文件路径并获取 FolderItem 对象
+	//FolderItem* pFolderItem;
+	//ULONG pchEaten;
+	//ULONG pdwAttributes;
+	//// 定义一个 ITEMIDLIST 来表示要获取的项目
+	//LPITEMIDLIST pidlItem;
+	//HRESULT hr = pDesktopFolder->ParseDisplayName(NULL, NULL, (LPWSTR)filePath, &pchEaten, &pidlItem, &pdwAttributes);
+	//if (SUCCEEDED(hr)) {
+	//	// 获取 FolderItem 对象
+	//	pDesktopFolder->GetUIObjectOf(NULL, 1, &pidlItem, IID_FolderItem, NULL, (void**)&pFolderItem);
+
+	//	// 使用 FolderItem 对象进行操作，比如获取文件路径、属性等
+
+	//	// 释放资源
+	//	pFolderItem->Release();
+	//	CoTaskMemFree(pidlItem); // 释放 ITEMIDLIST 对象
+	//}
+	//else {
+	//	// 处理解析文件路径失败的情况
+	//}
+
+	////if (true)
+	////{
+	////	HANDLE hProp = GetPropW(hTaskSwWnd, L"OleDropTargetInterface");
+	////	if (!hProp)
+	////		MessageBoxA(NULL, "GetPropW 失败", "OK", MB_OK);
+	////	__int64 v12;
+	////	v12 = *((uintptr_t*)hProp + 139);
+	////	char buffer3[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
+	////	sprintf_s(buffer3, "%p", (void*)v12); // 将地址格式化成字符串
+	////	MessageBoxA(NULL, buffer3, "OK", MB_OK);
+	////	//int task_groups_count = (int)plp[0];
+	////	//LONG_PTR** task_groups = (LONG_PTR**)plp[1];
+	////	//LONG_PTR* task_group = task_groups[0];
+	////	////int x = (((*(int*)(baseAddress + 0x5D)) / 8) + 3);
+
+	////	//char* x = ((char*)(absoluteAddress)+0x5D + 0x3);
+	////	////MessageBoxA(NULL, AddressToAnsiString((void*)x).data(), "OK", MB_OK);
+	////	//char buffer3[17]; // 16 个字符的缓冲区，用于存储地址的字符串表示
+	////	//sprintf_s(buffer3, "%p", (void*)*(short*)x); // 将地址格式化成字符串
+	////	////MessageBoxA(NULL, buffer3, "OK", MB_OK);
+
+	////	* ((unsigned long long**)hProp + (int)((int)*(short*)x / 8)) = (unsigned long long*)(struct ITaskGroup*)(*(__int64(__fastcall**)(__int64))(*(uintptr_t*)v12 + 48i64))(v12);;
+	////	((RealCTaskListWnd__Drop)absoluteAddress)(hProp, IDataObject1, 0, z, y);
+	////}
+	//return 1;
 }
 
 BOOL __fastcall InjectFun2Explorer(LPCVOID lpThreadArgs, HANDLE hProcess, thread_callback callBack)
