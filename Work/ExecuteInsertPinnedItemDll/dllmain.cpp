@@ -210,7 +210,7 @@ __int64 __fastcall CTaskBand__InsertPinnedItem(
 	//else {
 	//	MessageBoxA(NULL, "no pData", "OK", MB_OK);
 	//}
-	MessageBoxA(NULL, "CTaskBand__InsertPinnedItem", "OK", MB_OK);
+	//MessageBoxA(NULL, "CTaskBand__InsertPinnedItem", "OK", MB_OK);
 	return 0;
 }
 __int64 CTaskListWnd__Drop(
@@ -558,7 +558,7 @@ void SearchMemoryBlock(HANDLE hProcess, WORD* Tzm, WORD TzmLength, unsigned __in
 
 	if (!ReadProcessMemory(hProcess, (LPCVOID)StartAddress, MemoryData, size, NULL))
 	{
-		MessageBoxA(NULL, AddressToAnsiString((void*)(StartAddress)).data(), "OK", MB_OK);
+		//MessageBoxA(NULL, AddressToAnsiString((void*)(StartAddress)).data(), "OK", MB_OK);/
 		return;
 	}
 
@@ -647,22 +647,18 @@ int GetMiProcessLoaderEntryAddr(uintptr_t ulStartAddress, uintptr_t ulEndAddress
 	};
 	//CHAR szCodeFiag2[] = { 0x8B,0xCE,0xF0,0x0F,0xBA,0x29,0x1F };
 // 要修改的内存大小
-	SIZE_T size = 4096; // 假设要修改的内存大小为 4096 字节（一页大小）
-	// 新的访问权限
-	DWORD newProtect = PAGE_EXECUTE_READWRITE; // 假设要修改为可读写权限
 
-	// 保存原始权限
-	DWORD oldProtect;
-	// 修改内存权限
-	BOOL result = VirtualProtect((LPVOID)ulStartAddress, size, newProtect, &oldProtect);
 	//BOOL result = 1;
-	if (!result) {
-		MessageBoxA(NULL, "VirtualProtect failed", "OK", MB_OK);
-		DWORD error = GetLastError();
-		std::cerr << "Failed to change memory protection. Error code: " << error << std::endl;
-		return 1;
-	}
+
 	for (size_t i = ulStartAddress; i < ulEndAddress; i++) {
+		SIZE_T size = 4096; // 假设要修改的内存大小为 4096 字节（一页大小）
+// 新的访问权限
+		DWORD newProtect = PAGE_EXECUTE_READWRITE; // 假设要修改为可读写权限
+
+		// 保存原始权限
+		DWORD oldProtect;
+		// 修改内存权限
+		BOOL result = VirtualProtect((LPVOID)ulStartAddress, size, newProtect, &oldProtect);
 		//MessageBoxA(NULL, AddressToAnsiString((void*)((char*)ulStartAddress + i)).data(), "OK", MB_OK);
 		//MessageBoxA(NULL, AddressToAnsiString((void*)*((char*)ulStartAddress + i)).data(), "OK", MB_OK);
 		//MessageBoxA(NULL, AddressToAnsiString((void*)(szCodeFlag1)).data(), "OK", MB_OK);
@@ -689,28 +685,28 @@ HDPA* EV_TASK_SW_TASK_GROUPS_HDPA(void)
 void HookDrop() {
 	//readAndPrintFile("C:\\D_Files\\Project_Driver\\KillHappy\\x64\\Debug\\AddrList.txt");
 	//MessageBox(NULL, "This Is From Dll!\nInject Success!", "OK", MB_OK);
-	DetourTransactionBegin();
-	DetourUpdateThread(GetCurrentThread());
+	//DetourTransactionBegin();
+	//DetourUpdateThread(GetCurrentThread());
 
 
-	// 获取当前线程句柄
-	HANDLE hThread = GetCurrentThread();
-	if (hThread == NULL) {
-		std::cerr << "Failed to get handle to current thread." << std::endl;
-	}
+	//// 获取当前线程句柄
+	//HANDLE hThread = GetCurrentThread();
+	//if (hThread == NULL) {
+	//	std::cerr << "Failed to get handle to current thread." << std::endl;
+	//}
 
-	// 获取当前线程所属进程的进程ID
-	DWORD processId = GetProcessIdOfThread(hThread);
-	if (processId == 0) {
-		std::cerr << "Failed to get process ID of current thread." << std::endl;
-	}
+	//// 获取当前线程所属进程的进程ID
+	//DWORD processId = GetProcessIdOfThread(hThread);
+	//if (processId == 0) {
+	//	std::cerr << "Failed to get process ID of current thread." << std::endl;
+	//}
 
-	// 打开当前线程所属进程的进程句柄
-	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
-	if (hProcess == NULL) {
-		std::cerr << "Failed to open process handle." << std::endl;
-	}
-	std::vector<unsigned __int64> ResultArray;
+	//// 打开当前线程所属进程的进程句柄
+	//HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
+	//if (hProcess == NULL) {
+	//	std::cerr << "Failed to open process handle." << std::endl;
+	//}
+	//std::vector<unsigned __int64> ResultArray;
 
 	// 计算函数的绝对地址
 	uintptr_t baseAddress = reinterpret_cast<uintptr_t>(GetModuleHandle(NULL)); // 获取模块基址
@@ -719,18 +715,22 @@ void HookDrop() {
 	uintptr_t relativeOffset = 0x2357E0; // 替换为函数在目标程序中的相对地址
 	GetMiProcessLoaderEntryAddr(baseAddress, baseAddress + relativeOffset + 10000, (uintptr_t*)&absoluteAddress);
 	//absoluteAddress = baseAddress + relativeOffset; // 计算绝对地址
-	MessageBoxA(NULL, AddressToAnsiString((void*)(hProcess)).data(), "OK", MB_OK);
 	//SearchMemory(hProcess, (char*)"48 89 6C 24 18", baseAddress, baseAddress + 0x260000, 30, ResultArray);
 	//SearchMemory(hProcess, (char*)"48 89 6C 24 18", 0, 0x7fffffffffffffff, 30, ResultArray);
 	//SearchMemory(hProcess, (char*)"48 89 6C 24 18", baseAddress + relativeOffset, 0x260000, 30, ResultArray);
-	MessageBoxA(NULL, AddressToAnsiString((void*)(2)).data(), "OK", MB_OK);
+
+
+	//MessageBoxA(NULL, AddressToAnsiString((void*)(hProcess)).data(), "OK", MB_OK);
+	//MessageBoxA(NULL, AddressToAnsiString((void*)(2)).data(), "OK", MB_OK);
+	//MessageBoxA(NULL, AddressToAnsiString((void*)baseAddress).data(), "OK", MB_OK);
+
+
 	//for (std::vector<unsigned __int64>::iterator it = ResultArray.begin(); it != ResultArray.end(); it++)
 	//{
 	//	MessageBoxA(NULL, AddressToAnsiString((void*)(*it)).data(), "OK", MB_OK);
 	//}
 	// 将绝对地址转换为函数指针
 	//FunctionPtr function = reinterpret_cast<FunctionPtr>(absoluteAddress);
-	MessageBoxA(NULL, AddressToAnsiString((void*)baseAddress).data(), "OK", MB_OK);
 	printf("absoluteAddress: %p", baseAddress);
 
 	// 调用函数
@@ -762,12 +762,14 @@ void HookDrop() {
 	//	isFirst = false;
 	//	return 0;
 	//}
-	IDataObject1 = GetDataObjectForFile("C:\\Users\\Administrator\\Desktop\\inst.exe", NULL);
-	unsigned int x = 7;
+	IDataObject1 = GetDataObjectForFile("C:\\Windows\\System32\\calc.exe", NULL);
+	unsigned int x = 0;
 	unsigned int* y = &x;
 	_POINTL z;
 	z.x = 0x12F;
 	z.y = 0x38A;
+
+	MessageBoxA(NULL, "EV_TASK_SW_TASK_GROUPS_HDPA 开始", "OK", MB_OK);
 
 
 	LONG_PTR* plp = (LONG_PTR*)*EV_TASK_SW_TASK_GROUPS_HDPA();
@@ -778,11 +780,11 @@ void HookDrop() {
 		LONG_PTR* task_group = task_groups[0];
 		//int x = (((*(int*)(baseAddress + 0x5D)) / 8) + 3);
 		char* x = ((char*)(absoluteAddress)+0x5D + 0x3);
-		MessageBoxA(NULL, AddressToAnsiString((void*)x).data(), "OK", MB_OK);
+		//MessageBoxA(NULL, AddressToAnsiString((void*)x).data(), "OK", MB_OK);
 		MessageBoxA(NULL, AddressToAnsiString((void*)*(short*)x).data(), "OK", MB_OK);
 		*((unsigned long long**)hProp + (int)((int)*(short*)x / 8)) = (unsigned long long*)task_group;
 	}
-	((RealCTaskListWnd__Drop)absoluteAddress)(hProp, IDataObject1, 1, z, y);
+	((RealCTaskListWnd__Drop)absoluteAddress)(hProp, IDataObject1, 0, z, y);
 
 
 	//MessageBoxA(NULL, AddressToAnsiString((void*)a3).data(), "OK", MB_OK);
@@ -793,14 +795,14 @@ void HookDrop() {
 	//MessageBoxA(NULL, AddressToAnsiString((void*)IDataObject1).data(), "OK", MB_OK);
 	//MessageBoxA(NULL, AddressToAnsiString((void*)absoluteAddress).data(), "OK", MB_OK);
 
-	MessageBoxA(NULL, "CTaskListWnd__Drop", "OK", MB_OK);
+	//MessageBoxA(NULL, "CTaskListWnd__Drop", "OK", MB_OK);
 
 	// 对 wsasend 函数进行 Hook，将其替换为自定义的 HookedWsaSend 函数
-	DetourAttach(&(PVOID&)absoluteAddress, CTaskListWnd__Drop);
-	//ptr(nullptr, nullptr, nullptr, nullptr, 3);
+	//DetourAttach(&(PVOID&)absoluteAddress, CTaskListWnd__Drop);
+	////ptr(nullptr, nullptr, nullptr, nullptr, 3);
 
-	// 完成 Hook 事务
-	DetourTransactionCommit();
+	//// 完成 Hook 事务
+	//DetourTransactionCommit();
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule,
@@ -810,7 +812,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 {
 	if (ul_reason_for_call == DLL_PROCESS_ATTACH)
 	{
-		MessageBoxA(NULL, "DLL_PROCESS_DETACH", "OK", MB_OK);
+		//MessageBoxA(NULL, "DLL_PROCESS_DETACH", "OK", MB_OK);s
 		//HookInsertPin();
 		HookDrop();
 		//HookUser32();
