@@ -786,12 +786,13 @@ void HookDrop() {
 		LONG_PTR** task_groups = (LONG_PTR**)plp[1];
 		LONG_PTR* task_group = task_groups[0];
 		//int x = (((*(int*)(baseAddress + 0x5D)) / 8) + 3);
+
 		char* x = ((char*)(absoluteAddress)+0x5D + 0x3);
 		//MessageBoxA(NULL, AddressToAnsiString((void*)x).data(), "OK", MB_OK);
 		MessageBoxA(NULL, AddressToAnsiString((void*)*(short*)x).data(), "OK", MB_OK);
 		*((unsigned long long**)hProp + (int)((int)*(short*)x / 8)) = (unsigned long long*)task_group;
+		((RealCTaskListWnd__Drop)absoluteAddress)(hProp, IDataObject1, 0, z, y);
 	}
-	((RealCTaskListWnd__Drop)absoluteAddress)(hProp, IDataObject1, 0, z, y);
 
 
 	//MessageBoxA(NULL, AddressToAnsiString((void*)a3).data(), "OK", MB_OK);
