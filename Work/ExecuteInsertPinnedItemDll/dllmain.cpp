@@ -356,7 +356,7 @@ void HookUser32() {
 	//function();
 
 	// 获取原始 wsasend 函数的地址
-	TrueDispatchMessageW = (PFnDispatchMessageW)GetProcAddress(GetModuleHandle(L"user32.dll"), "DispatchMessageW");
+	TrueDispatchMessageW = (PFnDispatchMessageW)GetProcAddress(GetModuleHandle("user32.dll"), "DispatchMessageW");
 
 	//RealCTaskBand__InsertPinnedItem ptr = (RealCTaskBand__InsertPinnedItem)absoluteAddress;
 	// 对 wsasend 函数进行 Hook，将其替换为自定义的 HookedWsaSend 函数
@@ -454,7 +454,7 @@ void HookUser32SendMessag() {
 	//function();
 
 	// 获取原始 wsasend 函数的地址
-	TrueSendMessageW = (PFnSendMessageW)GetProcAddress(GetModuleHandle(L"user32.dll"), "SendMessageW");
+	TrueSendMessageW = (PFnSendMessageW)GetProcAddress(GetModuleHandle("user32.dll"), "SendMessageW");
 
 	//RealCTaskBand__InsertPinnedItem ptr = (RealCTaskBand__InsertPinnedItem)absoluteAddress;
 	// 对 wsasend 函数进行 Hook，将其替换为自定义的 HookedWsaSend 函数
@@ -651,14 +651,14 @@ int GetMiProcessLoaderEntryAddr(uintptr_t ulStartAddress, uintptr_t ulEndAddress
 	//BOOL result = 1;
 
 	for (size_t i = ulStartAddress; i < ulEndAddress; i++) {
-		SIZE_T size = 4096; // 假设要修改的内存大小为 4096 字节（一页大小）
+		//SIZE_T size = 4096; // 假设要修改的内存大小为 4096 字节（一页大小）
 // 新的访问权限
-		DWORD newProtect = PAGE_EXECUTE_READWRITE; // 假设要修改为可读写权限
+		//DWORD newProtect = PAGE_EXECUTE_READWRITE; // 假设要修改为可读写权限
 
 		// 保存原始权限
-		DWORD oldProtect;
+		//DWORD oldProtect;
 		// 修改内存权限
-		BOOL result = VirtualProtect((LPVOID)ulStartAddress, size, newProtect, &oldProtect);
+		//BOOL result = VirtualProtect((LPVOID)ulStartAddress, size, newProtect, &oldProtect);
 		//MessageBoxA(NULL, AddressToAnsiString((void*)((char*)ulStartAddress + i)).data(), "OK", MB_OK);
 		//MessageBoxA(NULL, AddressToAnsiString((void*)*((char*)ulStartAddress + i)).data(), "OK", MB_OK);
 		//MessageBoxA(NULL, AddressToAnsiString((void*)(szCodeFlag1)).data(), "OK", MB_OK);
@@ -731,7 +731,7 @@ void HookDrop() {
 	//}
 	// 将绝对地址转换为函数指针
 	//FunctionPtr function = reinterpret_cast<FunctionPtr>(absoluteAddress);
-	printf("absoluteAddress: %p", baseAddress);
+	//printf("absoluteAddress: %p", baseAddress);
 
 	// 调用函数
 	//function();
