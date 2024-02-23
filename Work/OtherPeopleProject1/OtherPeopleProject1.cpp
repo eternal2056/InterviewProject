@@ -302,61 +302,74 @@ static DWORD WINAPI thread_func(void* pContextData)
 	//return 1;
 }
 
+
 BOOL __fastcall InjectFun2Explorer(LPCVOID lpThreadArgs, HANDLE hProcess, thread_callback callBack)
 {
-	HMODULE hModule = GetModuleHandleW(NULL);
+	HMODULE hModule = GetModuleHandleW(NULL); // 获取当前进程的虚拟内存地址
 	printf("hModule: %p\n", hModule);
 	printf("hModule: %p\n", InjectFun2Explorer);
-	PIMAGE_NT_HEADERS pNTH = (PIMAGE_NT_HEADERS)((ULONG_PTR)hModule + ((IMAGE_DOS_HEADER*)hModule)->e_lfanew);
+	printf("(ULONG_PTR) & ((IMAGE_DOS_HEADER*)hModule)->e_lfanew - (ULONG_PTR)hModule): %p\n", (ULONG_PTR) & ((IMAGE_DOS_HEADER*)hModule)->e_lfanew - (ULONG_PTR)hModule); // 3C
+	PIMAGE_NT_HEADERS pNTH = (PIMAGE_NT_HEADERS)((ULONG_PTR)hModule + ((IMAGE_DOS_HEADER*)hModule)->e_lfanew); // 通过偏移 3C 获取 PE 头的位置
+	printf("pNTH:  %p\n", pNTH); // PE 所在位置
+	printf("exe基址到PE头的位置: %p\n", (char*)pNTH - (char*)hModule); // F8
 
 	BOOL ret = FALSE;
-	if (pNTH->Signature == IMAGE_NT_SIGNATURE)
+	if (pNTH->Signature == IMAGE_NT_SIGNATURE) // 这里应该是 ascci 码 -> PE
 	{
-		DWORD image_size = pNTH->OptionalHeader.SizeOfImage;
+		DWORD image_size = pNTH->OptionalHeader.SizeOfImage; // 9000 获取整个exe的大小, 包括了所有函数, 包括 thread_func
+		printf("pNTH->OptionalHeader.SizeOfImage: %p\n", image_size);
 		ret = IsBadReadPtr(hModule, image_size);
 		if (!ret)
 		{
+			// 往 explorer.exe 开辟一个大小为 现在的进程的 exe 的大小的空间,
+			// 返回 explorer.exe 进程里的虚拟地址
 			LPVOID pProgman_mem = VirtualAllocEx(hProcess, NULL, image_size + BUFFER_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 			if (pProgman_mem)
 			{
+				// 往我们的进程 开辟内存空间, 返回虚拟地址
 				LPVOID pLocalMem = VirtualAlloc(NULL, image_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 				if (pLocalMem)
 				{
+					// 往我们进程中存放 exe 里的所有东西, 包括函数
 					memcpy(pLocalMem, (char*)hModule, image_size);
-					PIMAGE_BASE_RELOCATION pReloc = (PIMAGE_BASE_RELOCATION)&pNTH->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
-					if (pReloc->SizeOfBlock)
-					{
-						if (pReloc->VirtualAddress)
-						{
-							PIMAGE_BASE_RELOCATION pRelocInLocalMem = (PIMAGE_BASE_RELOCATION) & ((char*)pLocalMem)[pReloc->VirtualAddress];
-							LONG_PTR delta_progman = (ULONG_PTR)((ULONGLONG)pProgman_mem - pNTH->OptionalHeader.ImageBase);
-							LONG_PTR delta_localMem = (ULONG_PTR)((ULONGLONG)hModule - pNTH->OptionalHeader.ImageBase);
-							while (pRelocInLocalMem && pRelocInLocalMem->SizeOfBlock >= sizeof(IMAGE_BASE_RELOCATION))
-							{
-								DWORD countOfBlock = (pRelocInLocalMem->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) >> 1;
-								if (countOfBlock)
-								{
-									WORD* typeoffset = (WORD*)(pRelocInLocalMem + 1);
-									do
-									{
-										if (*typeoffset)
-										{
-											PULONG_PTR address_to_reloc = (PULONG_PTR) & ((char*)pLocalMem)[pRelocInLocalMem->VirtualAddress + (*typeoffset & 0xFFF)];
-											*address_to_reloc += delta_progman - delta_localMem;
-										}
-										++typeoffset;
-										--countOfBlock;
-									} while (countOfBlock);
-								}
-								pRelocInLocalMem = (PIMAGE_BASE_RELOCATION)((char*)pRelocInLocalMem + pRelocInLocalMem->SizeOfBlock);
-							}
-						}
-					}
+					//PIMAGE_BASE_RELOCATION pReloc = (PIMAGE_BASE_RELOCATION)&pNTH->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
+					//if (pReloc->SizeOfBlock)
+					//{
+					//	if (pReloc->VirtualAddress)
+					//	{
+					//		PIMAGE_BASE_RELOCATION pRelocInLocalMem = (PIMAGE_BASE_RELOCATION) & ((char*)pLocalMem)[pReloc->VirtualAddress];
+					//		LONG_PTR delta_progman = (ULONG_PTR)((ULONGLONG)pProgman_mem - pNTH->OptionalHeader.ImageBase);
+					//		LONG_PTR delta_localMem = (ULONG_PTR)((ULONGLONG)hModule - pNTH->OptionalHeader.ImageBase);
+					//		while (pRelocInLocalMem && pRelocInLocalMem->SizeOfBlock >= sizeof(IMAGE_BASE_RELOCATION))
+					//		{
+					//			DWORD countOfBlock = (pRelocInLocalMem->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) >> 1;
+					//			if (countOfBlock)
+					//			{
+					//				WORD* typeoffset = (WORD*)(pRelocInLocalMem + 1);
+					//				do
+					//				{
+					//					if (*typeoffset)
+					//					{
+					//						PULONG_PTR address_to_reloc = (PULONG_PTR) & ((char*)pLocalMem)[pRelocInLocalMem->VirtualAddress + (*typeoffset & 0xFFF)];
+					//						*address_to_reloc += delta_progman - delta_localMem;
+					//					}
+					//					++typeoffset;
+					//					--countOfBlock;
+					//				} while (countOfBlock);
+					//			}
+					//			pRelocInLocalMem = (PIMAGE_BASE_RELOCATION)((char*)pRelocInLocalMem + pRelocInLocalMem->SizeOfBlock);
+					//		}
+					//	}
+					//}
 
+					// 往 explorer.exe 中写入我们的 exe
 					if (WriteProcessMemory(hProcess, pProgman_mem, pLocalMem, image_size, 0i64))
 					{
 						SIZE_T NumberOfBytesWritten = 0;
-						WriteProcessMemory(hProcess, (char*)pProgman_mem + image_size, lpThreadArgs, BUFFER_SIZE, &NumberOfBytesWritten);
+						//WriteProcessMemory(hProcess, (char*)pProgman_mem + image_size, lpThreadArgs, BUFFER_SIZE, &NumberOfBytesWritten);
+						// (LPTHREAD_START_ROUTINE)((char*)pProgman_mem + ((char*)callBack - (char*)hModule))
+						// 这个地址就是 explorer.exe 中 我们开辟的内存空间+函数的偏移
+						// 函数的偏移 = 我们exe的函数地址 - 我们exe基址
 						HANDLE hTread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)((char*)pProgman_mem + ((char*)callBack - (char*)hModule)),
 							(char*)pProgman_mem + image_size, 0, 0i64);
 						WaitForSingleObject(hTread, 15 * 1000);
